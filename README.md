@@ -172,5 +172,9 @@ curl -X GET "http://localhost:8080/api/v1/metrics/user/user001"
 | MongoDB (Metrics) | 27018 |
 | RabbitMQ | 5672 / 15672 |
 
+### RabbitMQ
+Para ver los logs registrados en RabbitMQ revisar el log del scheduler-service en docker
+se podra observar algo asi:  LOG RECIBIDO DESDE RABBITMQ: >> MS: [scheduler-service] -> Endpoint llamado: [/api/v1/schedule/bookings/create] -> Hora: 2026-02-20T06:24:27.782165193
+
 ---
 *Este proyecto se desarrolla bajo la metodología Extreme Programming (XP), priorizando la comunicación constante, la simplicidad en el diseño, la retroalimentación rápida a través de pruebas automatizadas y entregas frecuentes de software funcional.*
