@@ -19,25 +19,38 @@ public class MembershipController {
 
     @Autowired
     private IMembershipUseCase useCase;
+    
     /**
-     * GET /api/v1/memberships/create
+     * POST /api/v1/memberships
+     * Crear membresía usando un cuerpo JSON
+     */
+    @PostMapping
+    public ResponseEntity<MembershipDTO> create(@Valid @RequestBody MembershipDTO dto) {
+        // Al usar @RequestBody, Spring mapea automáticamente el JSON al objeto DTO
+        MembershipDTO created = useCase.create(dto);
+        return new ResponseEntity<>(created, HttpStatus.CREATED);
+    }
+
+    /**
+     * GET /api/v1/memberships/create?userId=123&planType=MENSUAL&amountPaid=10.0&paymentMethod=EFECTIVO&expirationDate=2026-12-31
      * Crear membresía usando parámetros de URL (para pruebas desde navegador)
      */
     //lo que sea
+
     @GetMapping("/create")
     public ResponseEntity<MembershipDTO> createFromUrl(
             @RequestParam String userId,
             @RequestParam PlanType planType,
             @RequestParam BigDecimal amountPaid,
             @RequestParam String paymentMethod,
-            @RequestParam String expirationDate) {
+            @RequestParam LocalDate expirationDate) {
 
         MembershipDTO dto = new MembershipDTO();
         dto.setUserId(userId);
         dto.setPlanType(planType);
         dto.setAmountPaid(amountPaid);
         dto.setPaymentMethod(paymentMethod);
-        dto.setExpirationDate(LocalDate.parse(expirationDate));
+        dto.setExpirationDate(expirationDate);
 
         MembershipDTO created = useCase.create(dto);
         return new ResponseEntity<>(created, HttpStatus.CREATED);
@@ -65,4 +78,15 @@ public class MembershipController {
         boolean active = useCase.isMembershipActive(userId);
         return ResponseEntity.ok(active);
     }
+
+    /**
+     * GET /api/v1/memberships
+     * Obtener todas las membresías
+     */
+    @GetMapping("/all-memberships")
+    public ResponseEntity<?> getAll() {
+        var memberships = useCase.getAll();
+        return ResponseEntity.ok(memberships);
+    }
+    
 }

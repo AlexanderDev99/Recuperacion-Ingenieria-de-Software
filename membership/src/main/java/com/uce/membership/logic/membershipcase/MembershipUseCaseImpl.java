@@ -7,7 +7,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.UUID;
+import java.util.List;
 
 @Service
 public class MembershipUseCaseImpl implements IMembershipUseCase {
@@ -36,9 +38,9 @@ public class MembershipUseCaseImpl implements IMembershipUseCase {
 
     @Override
     public boolean isMembershipActive(String userId) {
-        // Lógica del PDF: Comprobar si expirationDate > fecha actual
+        // Comprobar si expirationDate > fecha actual
         return repository.findTopByUserIdOrderByExpirationDateDesc(userId)
-                .map(m -> m.getExpirationDate().isAfter(LocalDate.now()))
+                .map(m -> m.getExpirationDate().isAfter(LocalDate.now(ZoneId.of("America/Guayaquil"))))
                 .orElse(false);
     }
 
@@ -51,5 +53,12 @@ public class MembershipUseCaseImpl implements IMembershipUseCase {
         dto.setPaymentMethod(entity.getPaymentMethod());
         dto.setExpirationDate(entity.getExpirationDate());
         return dto;
+    }
+
+        @Override
+    public List<MembershipDTO> getAll() {
+        return repository.findAll().stream()
+                .map(this::mapToDTO)
+                .toList();
     }
 }
