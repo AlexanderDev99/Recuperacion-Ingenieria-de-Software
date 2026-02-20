@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+    # --- BASES DE DATOS ---
+    membership-db:
+        image: postgres:15
+        container_name: membership_postgres
+        environment:
+            POSTGRES_DB: membership_db
+            POSTGRES_USER: redStak
+            POSTGRES_PASSWORD: qu1Nch1nK
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+        ports:
+            - "5432:5432"
+        networks:
+            - FitFlow_network
+
+
+    # --- INFRAESTRUCTURA ---
+
+    # DISCOVERY
+    discovery:
+        build:
+            context: ./discovery
+            dockerfile: dockerfile
+        ports:
+            - "8761:8761"
+        networks:
+            - FitFlow_network
+
+    # GATEWAY 
+    gateway:
+        build:
+            context: ./gateway
+            dockerfile: dockerfile
+        ports:
+            - "8080:8080"
+        depends_on:
+            - discovery
+        networks:
+            - FitFlow_network
+
+    
+
+    # --- MICROSERVICIOS ---
+
+    membership-service:
+        build:
+            context: ./membership
+            dockerfile: dockerfile
+        depends_on:
+            - membership-db
+            - discovery
+        networks:
+            - FitFlow_network
+
+volumes:
+    mongo_data:
+    postgres_data:
+
+networks:
+    FitFlow_network:
+        driver: bridge

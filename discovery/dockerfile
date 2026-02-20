@@ -1,0 +1,8 @@
+FROM eclipse-temurin:21-jdk-jammy AS builder
+WORKDIR /build
+COPY . .
+RUN ./mvnw package -DskipTests
+
+FROM gcr.io/distroless/java21-debian12
+COPY --from=builder /build/target/discovery-0.0.1-SNAPSHOT.jar discovery-server.jar
+ENTRYPOINT ["java", "-jar", "/discovery-server.jar"]
