@@ -1,7 +1,7 @@
-version: '3.8'
-
 services:
     # --- BASES DE DATOS ---
+    
+    # PostgreSQL para Membership
     membership-db:
         image: postgres:15
         container_name: membership_postgres
@@ -12,52 +12,162 @@ services:
         volumes:
             - postgres_data:/var/lib/postgresql/data
         ports:
-            - "5432:5432"
+            - "5433:5432"
         networks:
             - FitFlow_network
 
+    # MongoDB para Scheduler
+    scheduler-db:
+        image: mongo:6.0
+        container_name: scheduler_mongo
+        restart: always
+        environment:
+            - MONGO_INITDB_ROOT_USERNAME=redStak
+            - MONGO_INITDB_ROOT_PASSWORD=qu1Nch1nK
+            - MONGO_INITDB_DATABASE=booking_db
+        volumes:
+            - scheduler_mongo_data:/data/db
+        ports:
+            - "27017:27017"
+        networks:
+            - FitFlow_network
+
+    # MongoDB para Metrics
+    metrics-db:
+        image: mongo:6.0
+        container_name: metrics_mongo
+        restart: always
+        environment:
+            - MONGO_INITDB_ROOT_USERNAME=redStak
+            - MONGO_INITDB_ROOT_PASSWORD=qu1Nch1nK
+            - MONGO_INITDB_DATABASE=metrics_db
+        volumes:
+            - metrics_mongo_data:/data/db
+        ports:
+            - "27018:27017"
+        networks:
+            - FitFlow_network
+
+    # RabbitMQ Broker
+    rabbitmq:
+        image: rabbitmq:3-management
+        container_name: rabbitmq
+        restart: always
+        environment:
+            - RABBITMQ_DEFAULT_USER=guest
+            - RABBITMQ_DEFAULT_PASS=guest
+        ports:
+            - "5672:5672"
+            - "15672:15672"
+        networks:
+            - FitFlow_network
 
     # --- INFRAESTRUCTURA ---
 
-    # DISCOVERY
-    discovery:
+    # DISCOVERY (Eureka Server)
+    service-registry:
         build:
             context: ./discovery
             dockerfile: dockerfile
+        container_name: service-registry
+        hostname: service-registry
         ports:
             - "8761:8761"
         networks:
             - FitFlow_network
+        healthcheck:
+            test: ["CMD-SHELL", "wget -q --spider http://localhost:8761/actuator/health || exit 1"]
+            interval: 10s
+            timeout: 10s
+            retries: 10
+            start_period: 40s
 
-    # GATEWAY 
-    gateway:
+    # API GATEWAY 
+    api-gateway:
         build:
             context: ./gateway
             dockerfile: dockerfile
+        container_name: api-gateway
+        hostname: api-gateway
         ports:
             - "8080:8080"
         depends_on:
-            - discovery
+            service-registry:
+                condition: service_healthy
         networks:
             - FitFlow_network
 
-    
-
     # --- MICROSERVICIOS ---
 
+    # Membership Service
     membership-service:
         build:
             context: ./membership
             dockerfile: dockerfile
+        container_name: membership-service
+        hostname: membership-service
+        ports:
+            - "8081:8081"
         depends_on:
-            - membership-db
-            - discovery
+            membership-db:
+                condition: service_started
+            service-registry:
+                condition: service_healthy
+        networks:
+            - FitFlow_network
+
+    # Scheduler Service
+    scheduler-service:
+        build:
+            context: ./scheduler
+            dockerfile: dockerfile
+        container_name: scheduler-service
+        hostname: scheduler-service
+        environment:
+            - SPRING_DATA_MONGODB_HOST=scheduler-db
+            - SPRING_DATA_MONGODB_PORT=27017
+            - SPRING_DATA_MONGODB_DATABASE=booking_db
+            - SPRING_DATA_MONGODB_USERNAME=redStak
+            - SPRING_DATA_MONGODB_PASSWORD=qu1Nch1nK
+            - SPRING_DATA_MONGODB_AUTHENTICATIONDATABASE=admin
+            - SPRING_RABBITMQ_HOST=rabbitmq
+            - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://service-registry:8761/eureka/
+        ports:
+            - "8082:8082"
+        depends_on:
+            scheduler-db:
+                condition: service_started
+            rabbitmq:
+                condition: service_started
+            service-registry:
+                condition: service_healthy
+        networks:
+            - FitFlow_network
+
+    # Metrics Service
+    metrics-service:
+        build:
+            context: ./metricservice
+            dockerfile: dockerfile
+        container_name: metrics-service
+        hostname: metrics-service
+        environment:
+            - SPRING_DATA_MONGODB_URI=mongodb://redStak:qu1Nch1nK@metrics-db:27017/metrics_db?authSource=admin
+            - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://service-registry:8761/eureka/
+        ports:
+            - "8083:8083"
+        depends_on:
+            metrics-db:
+                condition: service_started
+            service-registry:
+                condition: service_healthy
         networks:
             - FitFlow_network
 
 volumes:
-    mongo_data:
     postgres_data:
+    scheduler_mongo_data:
+    metrics_mongo_data:
 
 networks:
     FitFlow_network:

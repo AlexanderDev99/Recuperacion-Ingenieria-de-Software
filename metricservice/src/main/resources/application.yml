@@ -1,0 +1,31 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: metrics-service
+  web:
+    error:
+      include-message: always
+      include-binding-errors: always
+  data:
+    mongodb:
+      uri: mongodb://redStak:qu1Nch1nK@metrics-db:27017/metrics_db?authSource=admin
+      database: metrics_db
+
+# Configuración opcional para ver las consultas en consola durante el desarrollo
+logging:
+  level:
+    org.springframework.data.mongodb.core.MongoTemplate: DEBUG
+
+# --- EUREKA CLIENT ---
+eureka:
+  client:
+    service-url:
+      defaultZone: http://service-registry:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    hostname: metrics-service
+    prefer-ip-address: false
+    instance-id: ${spring.application.name}:${server.port}

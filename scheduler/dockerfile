@@ -1,0 +1,8 @@
+FROM maven:3.9.8-eclipse-temurin-21 AS builder
+WORKDIR /build
+COPY . .
+RUN mvn clean package -DskipTests
+
+FROM gcr.io/distroless/java21-debian12
+COPY --from=builder /build/target/scheduler-1.0-SNAPSHOT.jar scheduler-service.jar
+ENTRYPOINT ["java", "-jar", "scheduler-service.jar"]
