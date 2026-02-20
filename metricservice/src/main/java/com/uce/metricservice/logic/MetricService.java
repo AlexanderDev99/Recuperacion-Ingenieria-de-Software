@@ -22,10 +22,19 @@ public class MetricService {
      * Guarda una métrica consultando el classId al scheduler-service.
      * Requerimiento PDF: El classId NO debe recibirse desde el endpoint,
      * el microservicio de métricas debe consultar internamente al scheduler.
+     * Se verifica que la clase sea vigente (bookingDate >= fecha actual).
      */
     public Metric saveMetric(MetricsDTO dto) {
         // Consultamos al scheduler para obtener el último booking del usuario
         BookingDTO lastBooking = schedulerClient.getLastBookingByUser(dto.getUserId());
+        
+        // Verificar si la clase sigue siendo vigente
+        LocalDateTime now = LocalDateTime.now();
+        if (lastBooking.getBookingDate() == null || lastBooking.getBookingDate().isBefore(now)) {
+            throw new IllegalStateException("La clase no es vigente. La fecha de la clase (" 
+                + lastBooking.getBookingDate() + ") ya ha pasado.");
+        }
+        
         String classId = lastBooking.getClassId();
 
         Metric metric = new Metric();
