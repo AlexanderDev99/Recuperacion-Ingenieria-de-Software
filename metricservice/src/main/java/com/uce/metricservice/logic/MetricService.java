@@ -1,6 +1,7 @@
 package com.uce.metricservice.logic;
 
 import com.uce.metricservice.clients.SchedulerClient;
+import com.uce.metricservice.data.entities.BookingDTO;
 import com.uce.metricservice.data.entities.Metric;
 import com.uce.metricservice.data.entities.MetricsDTO;
 import com.uce.metricservice.data.repository.MetricRepository;
@@ -15,31 +16,30 @@ import java.util.List;
 public class MetricService {
 
     private final MetricRepository metricRepository;
-    private final SchedulerClient schedulerClient; // Inyectamos el cliente HTTP
+    private final SchedulerClient schedulerClient;
 
-public Metric saveMetric(MetricsDTO dto) {
-    // 1. COMENTA temporalmente la llamada real al Scheduler para evitar el Error 500
-    /*
-    BookingDTO lastBooking = schedulerClient.getLastBookingByUser(dto.getUserId());
-    String classId = lastBooking.getClassId();
-    */
+    /**
+     * Guarda una métrica consultando el classId al scheduler-service.
+     * Requerimiento PDF: El classId NO debe recibirse desde el endpoint,
+     * el microservicio de métricas debe consultar internamente al scheduler.
+     */
+    public Metric saveMetric(MetricsDTO dto) {
+        // Consultamos al scheduler para obtener el último booking del usuario
+        BookingDTO lastBooking = schedulerClient.getLastBookingByUser(dto.getUserId());
+        String classId = lastBooking.getClassId();
 
-    // 2. USA un valor simulado para poder probar tu base de datos
-    String classId = "CLASE-MOCK-PRUEBA"; 
+        Metric metric = new Metric();
+        metric.setUserId(dto.getUserId());
+        metric.setExercise(dto.getExercise());
+        metric.setValue(dto.getValue());
+        metric.setUnit(dto.getUnit());
+        metric.setClassId(classId); // Obtenido del scheduler
+        metric.setTimestamp(LocalDateTime.now());
 
-    // 3. El resto del código sigue igual
-    Metric metric = new Metric();
-    metric.setUserId(dto.getUserId());
-    metric.setExercise(dto.getExercise());
-    metric.setValue(dto.getValue());
-    metric.setUnit(dto.getUnit());
-    metric.setClassId(classId); // Usamos el simulado
-    metric.setTimestamp(LocalDateTime.now());
+        return metricRepository.save(metric);
+    }
 
-    return metricRepository.save(metric);
-}
-
-public List<Metric> getMetricsByUserId(String userId) {
+    public List<Metric> getMetricsByUserId(String userId) {
         return metricRepository.findByUserId(userId);
     }
 }

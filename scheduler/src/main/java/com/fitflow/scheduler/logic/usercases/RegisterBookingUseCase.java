@@ -23,10 +23,15 @@ public class RegisterBookingUseCase {
     private BookingMembershipInterface bookingMembershipInterface;
 
     public Result<BookingEntityUI> register(String userId, String classId, LocalDateTime bookingDate ,Status status) {
-        try {         
+        try {
+            // Validación @Future: La fecha de reserva debe ser futura
+            if (bookingDate == null || !bookingDate.isAfter(LocalDateTime.now())) {
+                return Result.failure(new Exception("La fecha de reserva debe ser una fecha futura"));
+            }
+
             Boolean isActive = bookingMembershipInterface.isActive(userId);
             if(isActive == null || !isActive) {
-                return Result.failure(new Exception("User does not have an active membership"));
+                return Result.failure(new Exception("El usuario no tiene una membresía activa"));
             }
 
             BookingEntityDb bookingBuilder = BookingEntityDb.builder()
